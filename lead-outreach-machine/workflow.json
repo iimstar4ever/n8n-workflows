@@ -1,0 +1,83 @@
+{
+  "name": "Lead Outreach Machine",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Sample lead data - replace with your input\nconst leads = [\n  { company: 'Acme Corp', website: 'acme.com', name: 'John' },\n  { company: 'TechStart', website: 'techstart.io', name: 'Sarah' }\n];\n\nreturn { json: { leads } };"
+      },
+      "id": "input",
+      "name": "Get Leads",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.leads[0].website }}",
+        "options": {
+          "method": "GET"
+        }
+      },
+      "id": "enrich_http",
+      "name": "Enrich Company Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "prompt": "Write a personalized cold outreach email to {{$json.name}} at {{$json.company}}. \n\nCompany: {{$json.company}}\nContact: {{$json.name}}\n\nWrite a short, friendly 3-sentence intro that shows I've done my homework. Don't be salesy.",
+        "options": {}
+      },
+      "id": "ai_personalize",
+      "name": "AI Personalize Message",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "to": "={{ $json.email }}",
+        "subject": "Quick question for you, {{$json.name}}",
+        "body": "={{ $json.message }}"
+      },
+      "id": "send_email",
+      "name": "Send Outreach Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "Get Leads", "type": "main", "index": 0}]]
+    },
+    "Get Leads": {
+      "main": [[{"node": "Enrich Company Data", "type": "main", "index": 0}]]
+    },
+    "Enrich Company Data": {
+      "main": [[{"node": "AI Personalize Message", "type": "main", "index": 0}]]
+    },
+    "AI Personalize Message": {
+      "main": [[{"node": "Send Outreach Email", "type": "main", "index": 0}]]
+    }
+  }
+}
