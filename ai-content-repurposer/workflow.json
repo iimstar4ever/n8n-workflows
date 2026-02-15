@@ -1,0 +1,82 @@
+{
+  "name": "AI Content Repurposer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.rss2json.com/v1/api.json?rss_url={{$json.rss_feed}}",
+        "options": {}
+      },
+      "id": "fetch_rss",
+      "name": "Fetch RSS Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "prompt": "Take this blog post and repurpose it into: \n\n1. A Twitter/X thread (3-5 tweets)\n2. A LinkedIn post\n3. A short summary (50 words)\n\nContent: {{$json.title}} - {{$json.description}}\n\nFormat as JSON with keys: twitter_thread, linkedin_post, summary",
+        "options": {}
+      },
+      "id": "ai_repurpose",
+      "name": "AI Repurpose Content",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "title": "{{$json.twitter_thread}}",
+        "body": "{{$json.twitter_thread}}"
+      },
+      "id": "post_twitter",
+      "name": "Post to Twitter",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "content": "{{$json.linkedin_post}}"
+      },
+      "id": "post_linkedin",
+      "name": "Post to LinkedIn",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [[{"node": "Fetch RSS Feed", "type": "main", "index": 0}]]
+    },
+    "Fetch RSS Feed": {
+      "main": [[{"node": "AI Repurpose Content", "type": "main", "index": 0}]]
+    },
+    "AI Repurpose Content": {
+      "main": [
+        [{"node": "Post to Twitter", "type": "main", "index": 0}],
+        [{"node": "Post to LinkedIn", "type": "main", "index": 0}]
+      ]
+    }
+  }
+}

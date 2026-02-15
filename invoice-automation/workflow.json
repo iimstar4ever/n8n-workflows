@@ -1,0 +1,89 @@
+{
+  "name": "Invoice Automation Suite",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "schedule",
+      "name": "Daily Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true
+      },
+      "id": "get_invoices",
+      "name": "Get Overdue Invoices",
+      "type": "n8n-nodes-base.xero",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "operation": "equal",
+              "value2": "OVERDUE"
+            }
+          ]
+        }
+      },
+      "id": "filter",
+      "name": "Filter Overdue",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "prompt": "Write a friendly but professional payment reminder email for an overdue invoice.\n\nInvoice details:\n- Amount: {{$json.total}}\n- Due date: {{$json.due_date}}\n- Customer: {{$json.contact_name}}\n\nKeep it short, friendly, and include a link to pay.",
+        "options": {}
+      },
+      "id": "ai_reminder",
+      "name": "AI Write Reminder",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "to": "={{ $json.email }}",
+        "subject": "Friendly reminder: Invoice {{$json.invoice_number}}",
+        "body": "={{ $json.reminder_message }}"
+      },
+      "id": "send_email",
+      "name": "Send Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Daily Check": {
+      "main": [[{"node": "Get Overdue Invoices", "type": "main", "index": 0}]]
+    },
+    "Get Overdue Invoices": {
+      "main": [[{"node": "Filter Overdue", "type": "main", "index": 0}]]
+    },
+    "Filter Overdue": {
+      "main": [[{"node": "AI Write Reminder", "type": "main", "index": 0}]]
+    },
+    "AI Write Reminder": {
+      "main": [[{"node": "Send Reminder", "type": "main", "index": 0}]]
+    }
+  }
+}
